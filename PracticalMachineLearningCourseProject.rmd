@@ -1,12 +1,12 @@
 ---
-title: "Practica lMachine Learning Course Project.rmd"
+title: "Practical Machine Learning Course Project"
 author: "Marco de los Santos"
 date: "8/29/2021"
 output: html_document
 ---
 
 Load necessary libraries
-```{r, echo=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(lattice)
 library(ggplot2)
 library(rpart)
