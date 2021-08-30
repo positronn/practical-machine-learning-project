@@ -1,0 +1,102 @@
+---
+title: "Practica lMachine Learning Course Project.rmd"
+author: "Marco de los Santos"
+date: "8/29/2021"
+output: html_document
+---
+
+Load necessary libraries
+```{r, echo=FALSE}
+library(lattice)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(caret)
+```
+
+
+
+## Introduction  
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.  
+
+In this project, we will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to predict the manner in which they did the exercise.  
+
+
+Load data
+```{r}
+trainRaw <- read.csv("./pml-training.csv")
+testRaw <- read.csv("./pml-testing.csv")
+dim(trainRaw)
+```
+
+How many complete cases do we have?
+```{r}
+sum(complete.cases(trainRaw))
+```
+
+
+## Preprocessing data 
+```{r}
+trainRaw <- trainRaw[, colSums(is.na(trainRaw)) == 0] 
+testRaw <- testRaw[, colSums(is.na(testRaw)) == 0] 
+classe <- trainRaw$classe
+trainRemove <- grepl("^X|timestamp|window", names(trainRaw))
+trainRaw <- trainRaw[, !trainRemove]
+trainCleaned <- trainRaw[, sapply(trainRaw, is.numeric)]
+trainCleaned$classe <- classe
+testRemove <- grepl("^X|timestamp|window", names(testRaw))
+testRaw <- testRaw[, !testRemove]
+testCleaned <- testRaw[, sapply(testRaw, is.numeric)]
+```
+
+
+# Splitting
+```{r}
+set.seed(1) 
+inTrain <- createDataPartition(trainCleaned$classe, p=0.70, list=F)
+trainData <- trainCleaned[inTrain, ]
+testData <- trainCleaned[-inTrain, ]
+```
+
+
+
+## Training with RandomForests
+```{r}
+controlRf <- trainControl(method="cv", 5)
+modelRf <- train(classe ~ ., data=trainData, method="rf", trControl=controlRf, ntree=100)
+modelRf
+```
+
+
+## Confusion Matrix and overall statistics
+```{r}
+predictRf <- predict(modelRf, testData)
+testData$classe <- as.factor(testData$classe)
+confusionMatrix(testData$classe, predictRf)
+```
+
+```{r}
+accuracy <- postResample(predictRf, testData$classe)
+accuracy
+```
+
+
+```{r}
+oose <- 1 - as.numeric(confusionMatrix(testData$classe, predictRf)$overall[1])
+oose
+```
+
+```{r}
+result <- predict(modelRf, testCleaned[, -length(names(testCleaned))])
+result
+```
+
+
+# Visualization of the model
+```{r}
+treeModel <- rpart(classe ~ ., data=trainData, method="class")
+prp(treeModel) 
+```
+
