@@ -26,77 +26,80 @@ In this project, we will use data from accelerometers on the belt, forearm, arm,
 
 Load data
 ```{r}
-trainRaw <- read.csv("./pml-training.csv")
-testRaw <- read.csv("./pml-testing.csv")
-dim(trainRaw)
+raw_training <- read.csv("./pml-training.csv")
+raw_test <- read.csv("./pml-testing.csv")
+dim(raw_training)
 ```
 
 How many complete cases do we have?
 ```{r}
-sum(complete.cases(trainRaw))
+sum(complete.cases(raw_training))
 ```
 
 
 ## Preprocessing data 
 ```{r}
-trainRaw <- trainRaw[, colSums(is.na(trainRaw)) == 0] 
-testRaw <- testRaw[, colSums(is.na(testRaw)) == 0] 
-classe <- trainRaw$classe
-trainRemove <- grepl("^X|timestamp|window", names(trainRaw))
-trainRaw <- trainRaw[, !trainRemove]
-trainCleaned <- trainRaw[, sapply(trainRaw, is.numeric)]
-trainCleaned$classe <- classe
-testRemove <- grepl("^X|timestamp|window", names(testRaw))
-testRaw <- testRaw[, !testRemove]
-testCleaned <- testRaw[, sapply(testRaw, is.numeric)]
+raw_training <- raw_training[, colSums(is.na(raw_training)) == 0] 
+raw_test <- raw_test[, colSums(is.na(raw_test)) == 0] 
+classe <- raw_training$classe
+
+training_cols_remove <- grepl("^X|timestamp|window", names(raw_training))
+raw_training <- raw_training[, !training_cols_remove]
+
+clean_training <- raw_training[, sapply(raw_training, is.numeric)]
+clean_training$classe <- classe
+
+test_cols_remove <- grepl("^X|timestamp|window", names(raw_test))
+raw_test <- raw_test[, !test_cols_remove]
+clean_test <- raw_test[, sapply(raw_test, is.numeric)]
 ```
 
 
 # Splitting
 ```{r}
 set.seed(1) 
-inTrain <- createDataPartition(trainCleaned$classe, p=0.70, list=F)
-trainData <- trainCleaned[inTrain, ]
-testData <- trainCleaned[-inTrain, ]
+inTrain <- createDataPartition(clean_training$classe, p=0.70, list=F)
+training_data <- clean_training[inTrain, ]
+testing_data <- clean_training[-inTrain, ]
 ```
 
 
 
 ## Training with RandomForests
 ```{r}
-controlRf <- trainControl(method="cv", 5)
-modelRf <- train(classe ~ ., data=trainData, method="rf", trControl=controlRf, ntree=100)
-modelRf
+control <- trainControl(method="cv", 5)
+forest <- train(classe ~ ., data=training_data, method="rf", trControl=control, ntree=100)
+forest
 ```
 
 
 ## Confusion Matrix and overall statistics
 ```{r}
-predictRf <- predict(modelRf, testData)
-testData$classe <- as.factor(testData$classe)
-confusionMatrix(testData$classe, predictRf)
+predictions <- predict(forest, testing_data)
+testing_data$classe <- as.factor(testing_data$classe)
+confusionMatrix(testing_data$classe, predictions)
 ```
 
 ```{r}
-accuracy <- postResample(predictRf, testData$classe)
+accuracy <- postResample(predictions, testing_data$classe)
 accuracy
 ```
 
 
 ```{r}
-oose <- 1 - as.numeric(confusionMatrix(testData$classe, predictRf)$overall[1])
+oose <- 1 - as.numeric(confusionMatrix(testing_data$classe, predictions)$overall[1])
 oose
 ```
 
 ```{r}
-result <- predict(modelRf, testCleaned[, -length(names(testCleaned))])
-result
+results <- predict(forest, clean_test[, -length(names(clean_test))])
+results
 ```
 
 
 # Visualization of the model
 ```{r}
-treeModel <- rpart(classe ~ ., data=trainData, method="class")
-prp(treeModel) 
+model <- rpart(classe ~ ., data=training_data, method="class")
+prp(model) 
 ```
 
